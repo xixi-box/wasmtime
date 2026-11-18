@@ -50,8 +50,8 @@ pub unsafe fn compute_handler(
             frame.fp(),
             frame.pc()
         );
-        let (store_code, rel_pc) = store.modules().store_code_by_pc(frame.pc())?;
-        let et = ExceptionTable::parse(store_code.code_memory().exception_tables())
+        let (exception_tables, rel_pc) = store.modules().exception_tables_by_pc(frame.pc())?;
+        let et = ExceptionTable::parse(exception_tables)
             .expect("Exception tables were validated on module load");
         let (frame_offset, handlers) = et.lookup_pc(u32::try_from(rel_pc).unwrap());
         let fp_to_sp = frame_offset.map(|frame_offset| -isize::try_from(frame_offset).unwrap());
@@ -107,10 +107,9 @@ pub unsafe fn compute_handler(
             if is_match {
                 let fp_to_sp = fp_to_sp.expect("frame offset must be known if we found a handler");
                 return Some((
-                    (store_code.text_range().start
+                    frame.pc() - rel_pc
                         + usize::try_from(handler.handler_offset)
-                            .expect("Module larger than usize"))
-                    .raw(),
+                            .expect("Module larger than usize"),
                     frame.fp().wrapping_add_signed(fp_to_sp),
                 ));
             }

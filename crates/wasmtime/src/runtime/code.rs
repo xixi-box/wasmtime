@@ -56,6 +56,13 @@ macro_rules! define_pc_kind {
 // See [`EngineCode`] for more details.
 define_pc_kind!(EngineCodePC);
 
+impl EngineCodePC {
+    /// Construct an EngineCodePC to look up store-invariant code by address.
+    pub fn from_raw(pc: usize) -> EngineCodePC {
+        EngineCodePC(pc)
+    }
+}
+
 // An address in "store code": the copy of code used when executing
 // instances of a module in a given store.
 //

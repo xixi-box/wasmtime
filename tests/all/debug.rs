@@ -11,6 +11,18 @@ use wasmtime::{
 use crate::async_functions::PollOnce;
 
 #[test]
+fn resource_drop_exception_barrier() -> Result<()> {
+    let mut config = Config::default();
+    config.guest_debug(true).wasm_exceptions(true);
+    let engine = Engine::new(&config)?;
+    let mut context = wasmtime_wast::WastContext::new(&engine, wasmtime_wast::Async::Yes, |_| {});
+    context.run_wast(
+        "resource-drop-exceptions-debug.wast",
+        include_bytes!("../misc_testsuite/component-model/resource-drop-exceptions-debug.wast"),
+    )
+}
+
+#[test]
 fn debugging_does_not_work_with_signal_based_traps() {
     let mut config = Config::default();
     config.guest_debug(true).signals_based_traps(true);

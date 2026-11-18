@@ -185,6 +185,28 @@ impl ModuleRegistry {
         Some((&code.code, pc))
     }
 
+    /// Look up exception tables and the relative PC for either store-specific
+    /// code or a store-invariant trampoline in the original engine code.
+    pub fn exception_tables_by_pc(&self, pc: usize) -> Option<(&[u8], usize)> {
+        if let Some((code, offset)) = self.store_code_by_pc(pc) {
+            return Some((code.code_memory().exception_tables(), offset));
+        }
+
+        // Guest debugging makes private copies of code, but store-invariant
+        // trampolines (including resource.drop's exception barrier) still run
+        // in the original image. Its metadata is identical to the private copy.
+        let (engine_start, store_start) = self
+            .store_code
+            .range(..=EngineCodePC::from_raw(pc))
+            .next_back()?;
+        let code = &self.loaded_code.get(*store_start)?.code;
+        let offset = pc.checked_sub(engine_start.raw())?;
+        if offset >= code.code_memory().text().len() {
+            return None;
+        }
+        Some((code.code_memory().exception_tables(), offset))
+    }
+
     /// Fetches the `StoreCode` for a given `EngineCode`.
     pub fn store_code(&self, engine_code: &EngineCode) -> Option<&StoreCode> {
         let store_code_pc = self.store_code_base(engine_code)?;
